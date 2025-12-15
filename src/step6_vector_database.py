@@ -25,6 +25,8 @@ class SearchResult:
     chunk_id: str
     knn_score: Optional[float] = None  # Score từ kNN search
     bm25_score: Optional[float] = None  # Score từ BM25 search
+    knn_rank: int = None
+    bm25_rank: int = None
 
 
 class BaseVectorStore(ABC):
@@ -167,17 +169,19 @@ class ElasticsearchVectorStore():
             }
         }
         resp = self.client.search(index=self.index_name, body=query_body)
-        results = []    
+        results = []
+        knn_rank=1    
         for hit in resp["hits"]["hits"]:
             results.append(
                 SearchResult(
                     content=hit["_source"]["content"],
                     metadata=hit["_source"].get("metadata", {}),
                     chunk_id=hit["_source"]["chunk_id"],
-                    score=hit["_score"]
+                    score=hit["_score"],
+                    knn_rank = knn_rank
                 )
             )
-
+            knn_rank += 1
         return results
 
     def search_by_BM25(self,query: str, top_k: int = 5) -> List[SearchResult]:
@@ -185,24 +189,27 @@ class ElasticsearchVectorStore():
             "query": {
                 "bool": {
                     "should": [
-                        {"match": {"content": query}},
-                        {"match": {"metadata.description": query}}
+                        {"match": {"metadata.h1": query}},
+                        {"match": {"metadata.h2": query}},
+                        {"match": {"metadata.h3": query}},
                     ]
                 }
             }
         }
         resp = self.client.search(index=self.index_name, body=query_body)
         results = []
+        bm25_rank= 1
         for hit in resp["hits"]["hits"]:
             results.append(
                 SearchResult(
                     content=hit["_source"]["content"],
                     metadata=hit["_source"].get("metadata", {}),
                     chunk_id=hit["_source"]["chunk_id"],
-                    score=hit["_score"]
+                    score=hit["_score"],
+                    bm25_rank = bm25_rank
                 )
             )
-
+            bm25_rank += 1
         return results
     def search_hybrid(self, query: str, query_embedding: List[float], top_k: int = 5, vector_weight: float = 0.5) -> List[SearchResult]:
         """
@@ -225,7 +232,7 @@ class ElasticsearchVectorStore():
         knn_results = self.search_by_knn(query_embedding, top_k=top_k) 
         
         # 2. Chạy BM25 search
-        bm25_results = self.search_by_BM25(query, top_k=top_k   )
+        bm25_results = self.search_by_BM25(query, top_k=top_k)
         
         # 3. Tạo dict để merge (key = chunk_id)
         merged = {}
@@ -236,25 +243,30 @@ class ElasticsearchVectorStore():
                 "content": result.content,
                 "metadata": result.metadata,
                 "knn_score": result.score,
-                "bm25_score": 0.0
+                "bm25_score": 0.0,
+                "knn_rank": result.knn_rank,
+                "bm25_rank": 10
             }
         
         # Thêm BM25 results
         for result in bm25_results:
             if result.chunk_id in merged:
                 merged[result.chunk_id]["bm25_score"] = result.score
+                merged[result.chunk_id]["bm25_rank"] = result.bm25_rank
             else:
                 merged[result.chunk_id] = {
                     "content": result.content,
                     "metadata": result.metadata,
                     "knn_score": 0.0,
-                    "bm25_score": result.score
+                    "bm25_score": result.score,
+                    "knn_rank": 10,
+                    "bm25_rank": result.bm25_rank
                 }
         
         # 4. Tính combined score và tạo SearchResult
         final_results = []
         for chunk_id, data in merged.items():
-            combined_score = (data["knn_score"] * vector_weight) + (data["bm25_score"] * text_weight)
+            combined_score = self.rrf(data["knn_rank"]) + self.rrf(data["bm25_rank"])
             
             final_results.append(
                 SearchResult(
@@ -271,6 +283,9 @@ class ElasticsearchVectorStore():
         final_results.sort(key=lambda x: x.score, reverse=True)
         return final_results[:top_k]
     
+    def rrf(self,rank: int, k: int = 60) -> float:
+        return 1 / (k + rank)
+        
     def delete(self, ids: List[str]) -> bool:
         for doc_id in ids:
             self.client.delete(index=self.index_name, id=doc_id)
@@ -296,3 +311,26 @@ class ElasticsearchVectorStore():
         self.client.delete_by_query(index=self.index_name, body={"query": {"match_all": {}}})
         return True       
 
+
+#test
+if __name__ == "__main__":
+    #KIỂM TRA HYBRID SEARCH
+    from step1_loader import DocumentLoader
+    from step2_preprocessing import TextPreprocessor
+    from step4_chungking import MarkdownChunker
+    from step5_embedding import VietnameseEmbedder
+    from step6_vector_database import ElasticsearchVectorStore
+
+    store = ElasticsearchVectorStore()
+    test_query = "Làm sao để đổi mật khẩu ?"
+    query_embedding = VietnameseEmbedder().embed_query(test_query)
+    query_embedding = query_embedding.tolist() if hasattr(query_embedding, "tolist") else query_embedding
+    results = store.search_hybrid(test_query, query_embedding, top_k=5)
+    for result in results:
+        print(f"Chunk ID: {result.chunk_id}")
+        print(f"Content: {result.content}")
+        print(f"Score: {result.score}")
+        print(f"KNN Score: {result.knn_score}")
+        print(f"BM25 Score: {result.bm25_score}")
+        print("-" * 50)
+    

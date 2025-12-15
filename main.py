@@ -6,14 +6,14 @@ sys.path.append("src")
 from graph import RAGGRaph
 
 def main():
-    print("🤖 RAG Chatbot - Gõ 'exit' để thoát")
+    print(" RAG Chatbot - Gõ 'exit' để thoát")
     print("-" * 50)
     
     rag = RAGGRaph()
     rag.build()
     
     while True:
-        question = input("\n👤 Bạn: ").strip()
+        question = input("\n Bạn: ").strip()
         
         if question.lower() in ["exit", "quit", "thoát"]:
             print("👋 Tạm biệt!")
@@ -23,7 +23,7 @@ def main():
             continue
         
         result = rag.run(question)
-        print(f"\n🤖 Bot: {result['response']}")
+        print(f"\n Bot: {result['response']}")
 
 if __name__ == "__main__":
     main()

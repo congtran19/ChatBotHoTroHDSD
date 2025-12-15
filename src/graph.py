@@ -117,7 +117,7 @@ class RAGGRaph:
         query_emb = self.embedder.embed_query(state["question"])
         query_emb = query_emb.tolist() if hasattr(query_emb, 'tolist') else query_emb
         results = self.vector_store.search_hybrid(state["question"], query_emb, top_k=5)
-        reranked = self.reranker.rerank(state["question"], results, top_k=3)
+        reranked = self.reranker.rerank(state["question"], results, top_k=5)
         print(reranked)
         return {"retrieved_docs": reranked}
 
@@ -130,7 +130,7 @@ class RAGGRaph:
             "response": response,
             "messages": [AIMessage(response)]
         }
-    
+
 
     #===========================ROUTER==============================
     def router(self, state: GraphState) -> str:
