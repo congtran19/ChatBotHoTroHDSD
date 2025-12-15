@@ -2,6 +2,8 @@
 
 Hệ thống **Retrieval-Augmented Generation (RAG)** sử dụng LangGraph để xây dựng chatbot thông minh, hỗ trợ trả lời câu hỏi dựa trên tài liệu hướng dẫn sử dụng phần mềm.
 
+DEMO TRÊN TERMINAL : https://www.youtube.com/watch?v=HUXtLfgQlGo
+
 ![Graph Flow](graph_flow.png)
 
 ---

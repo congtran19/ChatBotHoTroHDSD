@@ -67,10 +67,10 @@ Câu hỏi: {question}"""
         
         messages.append(HumanMessage(content=user_message))
         
-        # Debug
-        print(f"\n--- DEBUG RAG ---")
-        print(f"Context length: {len(context)} chars")
-        print(f"Question: {question}")
+        # # Debug
+        # print(f"\n--- DEBUG RAG ---")
+        # print(f"Context length: {len(context)} chars")
+        # print(f"Question: {question}")
         
         response = self.llm.invoke(messages)
         

@@ -13,7 +13,7 @@ def main():
     rag.build()
     
     while True:
-        question = input("\n Bạn: ").strip()
+        question = input("\nBẠN : ").strip()
         
         if question.lower() in ["exit", "quit", "thoát"]:
             print("👋 Tạm biệt!")
@@ -23,7 +23,7 @@ def main():
             continue
         
         result = rag.run(question)
-        print(f"\n Bot: {result['response']}")
+        print(f"\n BOT: {result['response']}")
 
 if __name__ == "__main__":
     main()
