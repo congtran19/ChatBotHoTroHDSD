@@ -18,9 +18,9 @@ class RAGGenerator:
 NGUYÊN TẮC:
 1. Trả lời dựa trên CONTEXT được cung cấp trong câu hỏi
 2. Nếu không có thông tin trong context, nói "Tôi không tìm thấy thông tin này trong tài liệu"
-3. Trích dẫn nguồn (source, trang) khi có thể
-4. Trả lời ngắn gọn, dễ hiểu
-5. Hiển thị các nguồn ở cuối 
+3. Trả lời ngắn gọn, dễ hiểu
+4. Hiển thị nguồn ở cuối câu trả lời 
+4. BẮT BUỘC hiển thị tất cả các nguồn theo dạng: [Nguồn: tên tài liệu | Trang: số trang | Section: tên section | Link ảnh : link ảnh]
 """
     
     def format_context(self, search_results: List[SearchResult]) -> str:
@@ -33,9 +33,8 @@ NGUYÊN TẮC:
             source = meta.get('source', 'Unknown')
             page = meta.get('page', 'N/A')
             section = meta.get('h2', meta.get('h1', 'N/A'))
-            
-            block = f"""[{i}] Nguồn: {source} | Trang: {page} | Section: {section}
-{result.content}"""
+            images = meta.get('images', [])
+            block = f"""[{i}] Nguồn: {source} | Trang: {page} | Section: {section}  | Link ảnh : {images} | Context: {result.content}"""
             parts.append(block)
         
         return "\n---\n".join(parts)

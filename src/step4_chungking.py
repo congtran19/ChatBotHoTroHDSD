@@ -198,7 +198,16 @@ class MarkdownChunker(Chunker):
             else:
                 break
         return page
+    import re
 
+
+    def _find_images_for_chunk(self, chunk_content: str) -> List[str]:
+        pattern = re.compile(r'!\[[^\]]*\]\(([^)]+)\)')
+        return pattern.findall(chunk_content)
+
+    def _remove_images(self, text: str) -> str:
+        pattern = re.compile(r'!\[[^\]]*\]\(([^)]+)\)')
+        return pattern.sub("", text)
     def chunk_document(self, document: Document) -> List[Chunk]:
         original_text = document.content
         parent_meta = document.metadata
@@ -226,7 +235,7 @@ class MarkdownChunker(Chunker):
         output = []
         for idx, ch in enumerate(final_chunks):
             content = ch["content"]
-
+            images = self._find_images_for_chunk(content)
             # Tìm vị trí content trong text gốc để map số trang
             snippet = content[:50]
             pos = original_text.find(snippet)
@@ -234,6 +243,9 @@ class MarkdownChunker(Chunker):
 
             # Remove markers
             cleaned = self._remove_page_markers(content)
+
+            #remove images marker
+            cleaned = self._remove_images(cleaned)
 
             # NER
             entities = self.entity_extractor.extract(cleaned)
@@ -246,7 +258,8 @@ class MarkdownChunker(Chunker):
                 "total_chunks": len(final_chunks),
                 "source": parent_meta.get("file_name", ""),
                 "total_pages": parent_meta.get("total_pages", None),
-                "entities": entities
+                "entities": entities,
+                "images": images
             }
 
             output.append(Chunk(
@@ -266,7 +279,7 @@ if __name__ == "__main__":
     loader = DocumentLoader()
     preprocessor = TextPreprocessor()
     
-    file_path = "/home/congtran/Thực Hành RAG/data/documents/tai_lieu_huong_dan_cho_tct.pdf"
+    file_path = "/home/congtran/RAG_demo/data/documents/tai_lieu_huong_dan_cho_tct.pdf"
     
     try:
         doc = loader.load(file_path)

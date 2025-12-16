@@ -83,7 +83,7 @@ class ElasticsearchVectorStore():
         self,
         host: str = "localhost",
         port: int = 9200,
-        index_name: str = "rag_vectors",
+        index_name: str = "rag_vectors_test",
         embedding_dim: int = 768,
         username: Optional[str] = None,
         password: Optional[str] = None,

@@ -44,7 +44,7 @@ if __name__ == "__main__":
     loader = DocumentLoader()
     preprocessor = TextPreprocessor()
     
-    file_path = "/home/congtran/Thực Hành RAG/data/documents/tai_lieu_huong_dan_cho_tct.pdf"
+    file_path = "/home/congtran/RAG_demo/data/documents/tai_lieu_huong_dan_cho_tct.pdf"
     
     try:
         doc = loader.load(file_path)

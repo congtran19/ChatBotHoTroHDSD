@@ -152,6 +152,9 @@ class PDFLoader(BaseLoader):
                 continue
             
             img_path = image_map[xref]
+            #lấy dạng markdown là tất cả những gì trong[] và img_path
+
+
             img_markdown = f"\n\n![image]({img_path})\n\n"
             
             # Tìm text block gần nhất phía TRÊN hình ảnh (y < img_y)
