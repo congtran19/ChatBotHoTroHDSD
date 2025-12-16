@@ -8,12 +8,13 @@ class TextPreprocessor:
     def preprocess(self, text) -> str:
         """Pipeline chính"""
         text = self.remove_extra_newline(text)
+        text = self.remove_toc_until_introduction(text)
         text = self._convert_bold_number_headers_to_markdown(text)
         text = self.remove_markdown_withoutinformation(text)
         text = self.normalize_unicode(text)
         text = self.remove_extra_whitespace(text)
         text = self.remove_special_characters(text)
-        text = self.remove_toc_until_introduction(text)
+        
         # text = self.lowercasing(text)
         #text = self.ner(text)
         return text
@@ -27,6 +28,7 @@ class TextPreprocessor:
         text = re.sub(r'\n\s+', '\n', text)
         # Bước 3: Loại bỏ nhiều newlines liên tiếp
         text = re.sub(r'\n+', '\n', text)
+        text = re.sub(r'_Trang\s+\d+/\d+_', '', text)
         return text.strip()
     def normalize_unicode(self, text) -> str:
         """
@@ -45,9 +47,27 @@ class TextPreprocessor:
         """Chuyển thành chữ thường"""
         return text.lower()
     def remove_special_characters(self, text) -> str:
-        """Loại bỏ ký tự đặc biệt"""
-        punctuations = "[\\]^_`{|}~"
-        pattern = re.compile("(%s)" % "|".join(re.escape(x) for x in punctuations))
+        """
+        Loại bỏ ký tự đặc biệt, nhưng GIỮ LẠI các ký tự quan trọng cho Markdown:
+        - [ ] (cho link/image)
+        - ! (cho image)
+        - ( ) (cho link/image)
+        - _ (thường dùng trong tên file hoặc bold/italic)
+        - * (bold/italic)
+        - # (header)
+        - ` (code)
+        - - (list)
+        
+        Chỉ loại bỏ những ký tự thực sự rác hoặc không mong muốn.
+        """
+        # Danh sách các ký tự cần loại bỏ (đã thu hẹp lại)
+        # Bỏ qua: [ ] ( ) _ * # ` - ! .
+        punctuations = r"\\^{|}~" 
+        
+        # Hoặc nếu muốn xóa cụ thể hơn, chỉ xóa những thứ không thuộc ASCII hoặc tiếng Việt
+        # Nhưng ở đây ta chỉ sửa logic cũ:
+        
+        pattern = re.compile(r"[%s]" % re.escape(punctuations))
         return pattern.sub("", text)
     def _convert_bold_number_headers_to_markdown(self, text: str) -> str:
         BOLD_NUMBER_HEADER = re.compile(
@@ -71,32 +91,9 @@ class TextPreprocessor:
         return re.sub(BOLD_NUMBER_HEADER, repl, text)
     def remove_toc_until_introduction(self, text: str) -> str:
         """
-        Xoá toàn bộ từ mục 'MỤC LỤC' cho đến khi gặp 'LỜI MỞ ĐẦU'.
+        Xoá toàn bộ cho đến khi gặp 'LỜI MỞ ĐẦU'.
         """
-
-        lines = text.split("\n")
-        cleaned = []
-        removing = False
-
-        for line in lines:
-            stripped = line.strip()
-
-            # Nếu gặp MỤC LỤC → bắt đầu xoá
-            if re.match(r"^\*{0,2}\s*MỤC LỤC\s*\*{0,2}$", stripped, flags=re.IGNORECASE):
-                removing = True
-                continue
-
-            # Nếu đang xoá và gặp LỜI MỞ ĐẦU → dừng xoá, bắt đầu giữ lại
-            if removing:
-                if re.search(r"LỜI\s+MỞ\s+ĐẦU", stripped, flags=re.IGNORECASE):
-                    removing = False
-                    cleaned.append(line)   # giữ dòng LỜI MỞ ĐẦU
-                continue
-
-            # Bình thường: giữ lại
-            cleaned.append(line)
-
-        return "\n".join(cleaned)
+        return re.sub(r'.*?(?=LỜI\s+MỞ\s+ĐẦU)', '', text, flags=re.DOTALL)
 
 
 
@@ -104,11 +101,11 @@ class TextPreprocessor:
 if __name__ == "__main__":
     from step1_loader import DocumentLoader
     loader = DocumentLoader()
-    file_path = "/home/congtran/Thực Hành RAG/data/documents/tai_lieu_huong_dan_cho_tct.pdf"   
+    file_path = "/home/congtran/RAG_demo/data/documents/tai_lieu_huong_dan_cho_tct.pdf"   
     preprocessor = TextPreprocessor()
     try:
         documents = loader.load(file_path)
-        with open("/home/congtran/Thực Hành RAG/data/documents/test1.markdown", "w", encoding="utf-8") as f:
+        with open("/home/congtran/RAG_demo/data/documents/test1.markdown", "w", encoding="utf-8") as f:
             documents.content = preprocessor.preprocess(documents.content)
             print(f"\n--- Metadata ---")
             for key, value in documents.metadata.items():
@@ -116,6 +113,7 @@ if __name__ == "__main__":
             print(f"\n--- Nội dung ---")
             print(documents.content)
             f.write(documents.content)
+        f.close()
     except FileNotFoundError as e:
         print(f"Lỗi: {e}")
-        f.close()
+        

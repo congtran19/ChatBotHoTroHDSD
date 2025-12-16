@@ -20,6 +20,7 @@ NGUYÊN TẮC:
 2. Nếu không có thông tin trong context, nói "Tôi không tìm thấy thông tin này trong tài liệu"
 3. Trích dẫn nguồn (source, trang) khi có thể
 4. Trả lời ngắn gọn, dễ hiểu
+5. Hiển thị các nguồn ở cuối 
 """
     
     def format_context(self, search_results: List[SearchResult]) -> str:
